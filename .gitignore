@@ -10,3 +10,13 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+build
+ESP32Code/build
+ESP32Code/.vscode
+ESP32Code/.devcontainer
+sdkconfig
+pytest*
+*.yml
+managed_components*
+ESP32Code/README*
+dependencies.lock
