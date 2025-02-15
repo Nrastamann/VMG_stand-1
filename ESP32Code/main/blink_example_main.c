@@ -12,6 +12,7 @@
 #include "sdkconfig.h"
 #include "esp_log.h"
 #include "esp_adc/adc_continuous.h"
+#include "esp_adc/adc_oneshot.h"
 
 /**
  * Brief:
@@ -34,7 +35,7 @@
 // data contains in next format: 12 bits for data and 4 for channel
 
 //================================================
-//ADC VARIABLES
+// ADC VARIABLES
 //================================================
 
 #define ADC_UNIT ADC_UNIT_1
@@ -52,25 +53,29 @@
 
 #define ADC_USED 3
 
-static adc_channel_t channel[ADC_USED] = {ADC_CHANNEL_6, ADC_CHANNEL_7, ADC_CHANNEL_5};
+#define ADC_CURRENT ADC_CHANNEL_5
+#define ADC_VOLTAGE ADC_CHANNEL_6
+#define ADC_DISTURBANCE ADC_CHANNEL_7
+
+const static adc_channel_t channel[ADC_USED] = {ADC_CURRENT, ADC_VOLTAGE, ADC_DISTURBANCE};
 static adc_continuous_handle_t adc_handler = NULL;
-static TaskHandle_t s_task_handle;
+
 static const char *TAG = "DEBUG";
 
 static uint8_t result[READ_LEN] = {0};
 struct PACKET_DATA
 {
-    uint32_t rpm; //Rotation per minute
-    uint32_t current; //current * 1000? idk, I'll figure it out, when understand how voltage/current sensor works
-    uint32_t voltage; //voltage * 1000 i guess
-    uint16_t temperature_1; //I'll change this name, I promisse
-    uint16_t temperature_2; //I'll change this name, I promisse
-    uint16_t temperature_3; //I'll change this name, I promisse
-    uint32_t weight; // I guess * 1000
-    uint32_t disturbance; //I don't know 
-    //maybeeee use smth like byte array to faster the process? also need to add some like
-    //test code? to check if msg wasn't corrupted
+    uint32_t rpm;                    // Rotation per minute
+    uint32_t ADC_Readings[ADC_USED]; // current * 1000, voltage * 1000, and disturbance idk, I'll figure it out, when understand how voltage/current sensor works
+    uint16_t temperature_1;          // I'll change this name, I promisse
+    uint16_t temperature_2;          // I'll change this name, I promisse
+    uint16_t temperature_3;          // I'll change this name, I promisse
+    uint32_t weight;                 // I guess * 1000
+    // maybeeee use smth like byte array to faster the process? also need to add some like
+    // test code? to check if msg wasn't corrupted
 };
+
+static struct PACKET_DATA packet_to_send = {0};
 
 /*
 // Callback that notify that ADC continuous driver has done enough number of conversions
@@ -85,38 +90,26 @@ struct PACKET_DATA
 
 // Init function, create some cfgs, initialise adc
 */
-static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num)
+static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num)//maybe remove parameters, bcz they're global
 {
-    adc_continuous_handle_t handle = NULL;
+    adc_oneshot_unit_handle_t handle = NULL;
 
-    adc_continuous_handle_cfg_t adc_config = {
-        .max_store_buf_size = 1024,
-        .conv_frame_size = READ_LEN,
+    adc_oneshot_unit_init_cfg_t dig_cfg = {
+        .unit_id = ADC_UNIT_1,
+        .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
 
-    ESP_ERROR_CHECK(adc_continuous_new_handle(&adc_config, &handle));
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&dig_cfg, &handle));
 
-    adc_continuous_config_t dig_cfg = {
-        .sample_freq_hz = 20 * 1000,
-        .conv_mode = ADC_CONV_MODE,
-        .format = ADC_OUTPUT_TYPE,
+    adc_oneshot_chan_cfg_t chan_config = {
+        .atten = ADC_ATTEN,
+        .bitwidth = ADC_BIT_WIDTH,
     };
 
-    adc_digi_pattern_config_t adc_pattern[SOC_ADC_PATT_LEN_MAX] = {0};
-    dig_cfg.pattern_num = channel_num;
-    for (int i = 0; i < channel_num; i++)
-    {
-        adc_pattern[i].atten = ADC_ATTEN;
-        adc_pattern[i].channel = channel[i] & 0x7; // idk why the fugg 7, rly
-        adc_pattern[i].unit = ADC_UNIT;
-        adc_pattern[i].bit_width = ADC_BIT_WIDTH;
+    for (uint8_t i = 0; i < ADC_USED; i++)
+        ESP_ERROR_CHECK(adc_oneshot_config_channel(handle, channel[i], &chan_config));
 
-        ESP_LOGI(TAG, "adc_pattern[%d].atten is :%" PRIx8, i, adc_pattern[i].atten);
-        ESP_LOGI(TAG, "adc_pattern[%d].channel is :%" PRIx8, i, adc_pattern[i].channel);
-        ESP_LOGI(TAG, "adc_pattern[%d].unit is :%" PRIx8, i, adc_pattern[i].unit);
-    }
-    dig_cfg.adc_pattern = adc_pattern;
-    ESP_ERROR_CHECK(adc_continuous_config(handle, &dig_cfg));
+    ESP_LOGI(TAG, "ADC INITIALIZATION IS DONE");
 
     adc_handler = handle;
 }
@@ -125,20 +118,18 @@ static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num)
 #define GPIO_INPUT_IO_1 CONFIG_GPIO_INPUT_1
 #define GPIO_INPUT_PIN_SEL (1ULL << GPIO_INPUT_IO_0)
 
-static uint32_t rotation_count = 0;
-static uint32_t adc_current = 0;
 /*
  * I suppose, that 1ULL - all possible pins, so be careful
  * Use bitwise (<<,>>, |, & - mostly) operations to get desired pin
  * */
 #define ESP_INTR_FLAG_DEFAULT 0 // I think that flag is used to give us ability to handle all the GPIO separetely
 
-//static QueueHandle_t gpio_evt_queue = NULL;
+// static QueueHandle_t gpio_evt_queue = NULL;
 
 static void IRAM_ATTR gpio_rotation_isr_handler(void *arg)
 {
-    rotation_count++;
-    //need to 
+    packet_to_send.rpm++;
+
     printf("Got rotation");
 }
 
@@ -162,10 +153,31 @@ static void adc_reading_task(void *arg)
     char unit[] = ADC_UNIT_STR(ADC_UNIT);
     uint32_t ret_num = 0;
     esp_err_t ret;
+    uint8_t index;
+    adc_channel_t channel = *(adc_channel_t *)arg;
+    uint16_t readings[10] = {0};
+    switch (channel)
+    {
+    case ADC_CURRENT:
+        index = 0;
+        break;
 
+    case ADC_VOLTAGE:
+        index = 1;
+        break;
+
+    case ADC_DISTURBANCE:
+        index = 2;
+        break;
+
+    default:
+        ESP_LOGW(TAG, "WRONG CHANNEL SENT TO ADC, FIX IT");
+        break;
+    }
     for (;;)
     {
-        ret = adc_continuous_read(adc_handler, result, READ_LEN, &ret_num, 0);
+        ESP_ERROR_CHECK(adc_oneshot_read(adc_handler, channel, &readings[0]));
+//        if (){} add smth with sending semaphores or idk
         if (ret == ESP_OK)
         {
             ESP_LOGI("TASK", "ret is %x, ret_num is %" PRIu32 " bytes", ret, ret_num);
@@ -177,7 +189,6 @@ static void adc_reading_task(void *arg)
                 /* Check the channel number validation, the data is invalid if the channel num exceed the maximum channel */
                 if (chan_num < SOC_ADC_CHANNEL_NUM(ADC_UNIT))
                 {
-                    ESP_LOGI(TAG, "Unit: %s, Channel: %" PRIu32 ", Value: %" PRIx32, unit, chan_num, data);
                 }
                 else
                 {
@@ -207,6 +218,7 @@ static void adc_reading_task(void *arg)
 
 void app_main(void)
 {
+
     gpio_config_t io_conf = {
         GPIO_INPUT_PIN_SEL, // gpio mask
         GPIO_MODE_INPUT,    /*!< GPIO mode: set input/output mode                     */
@@ -222,10 +234,11 @@ void app_main(void)
 
     // hook isr handler for specific gpio pin
     gpio_isr_handler_add(GPIO_INPUT_IO_0, gpio_rotation_isr_handler, NULL);
+    xTaskCreate(adc_reading_task, "ADC_Voltage", 2048, (void *));
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
-    //move it somewhere else
+    // move it somewhere else
     memset(result, 0xcc, READ_LEN);
 
     continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t));
@@ -234,5 +247,4 @@ void app_main(void)
     {
         vTaskDelay(1);
     }
-
 }
