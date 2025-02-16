@@ -90,7 +90,7 @@ static struct PACKET_DATA packet_to_send = {0};
 
 // Init function, create some cfgs, initialise adc
 */
-static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num)//maybe remove parameters, bcz they're global
+static void oneshot_adc_init(adc_channel_t *channel, uint8_t channel_num) // maybe remove parameters, bcz they're global
 {
     adc_oneshot_unit_handle_t handle = NULL;
 
@@ -147,6 +147,9 @@ static void gpio_task(void *arg) // arg - amount of rotations
     }
 }
 */
+
+/// @brief
+/// @param arg
 static void adc_reading_task(void *arg)
 {
 
@@ -156,6 +159,7 @@ static void adc_reading_task(void *arg)
     uint8_t index;
     adc_channel_t channel = *(adc_channel_t *)arg;
     uint16_t readings[10] = {0};
+    
     switch (channel)
     {
     case ADC_CURRENT:
@@ -174,46 +178,16 @@ static void adc_reading_task(void *arg)
         ESP_LOGW(TAG, "WRONG CHANNEL SENT TO ADC, FIX IT");
         break;
     }
+    
     for (;;)
     {
         ESP_ERROR_CHECK(adc_oneshot_read(adc_handler, channel, &readings[0]));
-//        if (){} add smth with sending semaphores or idk
-        if (ret == ESP_OK)
-        {
-            ESP_LOGI("TASK", "ret is %x, ret_num is %" PRIu32 " bytes", ret, ret_num);
-            for (int i = 0; i < ret_num; i += SOC_ADC_DIGI_RESULT_BYTES)
-            {
-                adc_digi_output_data_t *p = (adc_digi_output_data_t *)&result[i];
-                uint32_t chan_num = ADC_GET_CHANNEL(p);
-                uint32_t data = ADC_GET_DATA(p);
-                /* Check the channel number validation, the data is invalid if the channel num exceed the maximum channel */
-                if (chan_num < SOC_ADC_CHANNEL_NUM(ADC_UNIT))
-                {
-                }
-                else
-                {
-                    ESP_LOGW(TAG, "Invalid data [%s_%" PRIu32 "_%" PRIx32 "]", unit, chan_num, data);
-                }
-            }
-            /**
-             * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
-             * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
-             * usually you don't need this delay (as this task will block for a while).
-             */
-            vTaskDelay(1);
-        }
-        else if (ret == ESP_ERR_TIMEOUT)
-        {
-            // We try to read `READ_LEN` until API returns timeout, which means there's no available data
-            break;
-        }
+        //        if (){} add smth with sending semaphores or idk
+
+        packet_to_send.ADC_Readings[index] = readings;
+    
+        vTaskDelay(10);
     }
-    ESP_ERROR_CHECK(adc_continuous_stop(adc_handler));
-    ESP_ERROR_CHECK(adc_continuous_deinit(adc_handler));
-
-    ESP_LOGW(TAG, "TASK WAS DELETED, CHECK EVERYTHING AND TRY FIXING");
-
-    vTaskDelete(NULL);
 }
 
 void app_main(void)
@@ -234,17 +208,21 @@ void app_main(void)
 
     // hook isr handler for specific gpio pin
     gpio_isr_handler_add(GPIO_INPUT_IO_0, gpio_rotation_isr_handler, NULL);
-    xTaskCreate(adc_reading_task, "ADC_Voltage", 2048, (void *));
+
+    oneshot_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t));
+
+    xTaskCreate(adc_reading_task, "ADC_Voltage", 2048, (void*) ADC_VOLTAGE, 10, NULL); //check priorities, last null - handler
+    xTaskCreate(adc_reading_task, "ADC_Current", 2048, (void*) ADC_CURRENT, 10, NULL); //check priorities, last null - handler
+    xTaskCreate(adc_reading_task, "ADC_Disturbance", 2048, (void*) ADC_DISTURBANCE, 10, NULL); //check priorities, last null - handler
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
     // move it somewhere else
     memset(result, 0xcc, READ_LEN);
 
-    continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t));
-
+    
     while (1)
     {
-        vTaskDelay(1);
+        vTaskDelay(10);
     }
 }
