@@ -13,6 +13,8 @@
 #include "esp_log.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_adc/adc_oneshot.h"
+#include "esp_timer.h"
+#include "esp_sleep.h"
 
 /**
  * Brief:
@@ -38,6 +40,8 @@
 // ADC VARIABLES
 //================================================
 
+static void periodic_timer_callback(void *arg);
+
 #define ADC_UNIT ADC_UNIT_1
 #define _ADC_UNIT_STR(unit) #unit
 #define ADC_UNIT_STR(unit) _ADC_UNIT_STR(unit)
@@ -62,11 +66,13 @@ static adc_continuous_handle_t adc_handler = NULL;
 
 static const char *TAG = "DEBUG";
 
+#define AMOUNT_OF_WINGS 2
+
 static uint8_t result[READ_LEN] = {0};
 struct PACKET_DATA
 {
-    uint32_t rpm;                    // Rotation per minute
-    uint32_t ADC_Readings[ADC_USED]; // current * 1000, voltage * 1000, and disturbance idk, I'll figure it out, when understand how voltage/current sensor works
+    uint32_t rpm; //done                    // Rotation per minute
+    uint32_t ADC_Readings[ADC_USED]; //done  // current * 1000, voltage * 1000, and disturbance idk, I'll figure it out, when understand how voltage/current sensor works
     uint16_t temperature_1;          // I'll change this name, I promisse
     uint16_t temperature_2;          // I'll change this name, I promisse
     uint16_t temperature_3;          // I'll change this name, I promisse
@@ -75,6 +81,8 @@ struct PACKET_DATA
     // test code? to check if msg wasn't corrupted
 };
 
+static uint64_t time_rpm = 0; 
+static uint16_t rotation_count = 0;
 static struct PACKET_DATA packet_to_send = {0};
 
 /*
@@ -128,13 +136,23 @@ static void oneshot_adc_init(adc_channel_t *channel, uint8_t channel_num) // may
 
 static void IRAM_ATTR gpio_rotation_isr_handler(void *arg)
 {
-    packet_to_send.rpm++;
+    rotation_count++;
+    // xTaskNotify();
+    // packet_to_send.rpm++;
 
     printf("Got rotation");
 }
 
+static void periodic_timer_callback(void* arg)
+{
+    uint16_t count = rotation_count / AMOUNT_OF_WINGS;
+    uint64_t time_to_count = esp_timer_get_time() - time_rpm;
+
+    packet_to_send.rpm = count / time_to_count;
+}
+
 /*
-static void gpio_task(void *arg) // arg - amount of rotations
+static void rpm_calculation(void *arg) // arg - amount of rotations
 {
     for (;;)
     {
@@ -159,7 +177,7 @@ static void adc_reading_task(void *arg)
     uint8_t index;
     adc_channel_t channel = *(adc_channel_t *)arg;
     uint16_t readings[10] = {0};
-    
+
     switch (channel)
     {
     case ADC_CURRENT:
@@ -178,20 +196,32 @@ static void adc_reading_task(void *arg)
         ESP_LOGW(TAG, "WRONG CHANNEL SENT TO ADC, FIX IT");
         break;
     }
-    
+
     for (;;)
     {
         ESP_ERROR_CHECK(adc_oneshot_read(adc_handler, channel, &readings[0]));
         //        if (){} add smth with sending semaphores or idk
 
         packet_to_send.ADC_Readings[index] = readings;
-    
+
         vTaskDelay(10);
     }
 }
 
 void app_main(void)
 {
+
+    const esp_timer_create_args_t periodic_timer_args = {
+        .callback = &periodic_timer_callback,
+        /* name is optional, but may help identify the timer when debugging */
+        .name = "periodic"};
+
+    time_rpm = esp_timer_get_time();
+
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
 
     gpio_config_t io_conf = {
         GPIO_INPUT_PIN_SEL, // gpio mask
@@ -211,16 +241,15 @@ void app_main(void)
 
     oneshot_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t));
 
-    xTaskCreate(adc_reading_task, "ADC_Voltage", 2048, (void*) ADC_VOLTAGE, 10, NULL); //check priorities, last null - handler
-    xTaskCreate(adc_reading_task, "ADC_Current", 2048, (void*) ADC_CURRENT, 10, NULL); //check priorities, last null - handler
-    xTaskCreate(adc_reading_task, "ADC_Disturbance", 2048, (void*) ADC_DISTURBANCE, 10, NULL); //check priorities, last null - handler
+    xTaskCreate(adc_reading_task, "ADC_Voltage", 2048, (void *)ADC_VOLTAGE, 10, NULL);         // check priorities, last null - handler
+    xTaskCreate(adc_reading_task, "ADC_Current", 2048, (void *)ADC_CURRENT, 10, NULL);         // check priorities, last null - handler
+    xTaskCreate(adc_reading_task, "ADC_Disturbance", 2048, (void *)ADC_DISTURBANCE, 10, NULL); // check priorities, last null - handler
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
     // move it somewhere else
     memset(result, 0xcc, READ_LEN);
 
-    
     while (1)
     {
         vTaskDelay(10);
