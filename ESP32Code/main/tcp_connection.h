@@ -50,4 +50,7 @@ static int try_receive(const char *tag, const int sock, char * data, size_t max_
 
 static int socket_send(const char *tag, const int sock, const char * data, const size_t len);
 
-static void tcp_client_task(void *pvParameters);
+class TCP : public Transmission_protocols
+{
+    void send_data(void *pvParameters) final;
+};
