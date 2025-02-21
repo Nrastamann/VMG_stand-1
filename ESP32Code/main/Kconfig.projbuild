@@ -8,5 +8,25 @@ menu "Example Configuration"
         default 4
         help
             GPIO pin number to be used as GPIO_INPUT_IO_0.
+    config EXAMPLE_TCP_CLIENT
+        bool "TCP client"
+        default y
+        help
+            This example will setup a tcp client, connects to the specified address
+            and sends the data.
+
+    if EXAMPLE_TCP_CLIENT
+        config EXAMPLE_TCP_CLIENT_CONNECT_ADDRESS
+            string "Client connection address or hostname"
+            default "www.google.com"
+            help
+                Client's socket would connect to this address/host.
+
+        config EXAMPLE_TCP_CLIENT_CONNECT_PORT
+            string "Client connection port"
+            default "80"
+            help
+                Client connection port.
+
 
 endmenu

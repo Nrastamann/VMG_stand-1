@@ -1,4 +1,5 @@
-
+extern "C"
+{
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -16,11 +17,12 @@
 #include "esp_adc/adc_oneshot.h"
 #include "esp_timer.h"
 #include "esp_sleep.h"
-extern "C"{
+
 #include "HX711.h"
 }
 
-
+#include "wifi_connection.h"
+#include "tcp_connection.h"
 /**
  * Brief:
  * This code is running on VMG-Stand.
@@ -70,24 +72,7 @@ static adc_channel_t channel[ADC_USED] = {ADC_CURRENT, ADC_VOLTAGE, ADC_DISTURBA
 
 static adc_oneshot_unit_handle_t adc_handler = NULL;
 
-//=================================================================
-// TASK HANDLERS(For notifies)
-//=================================================================
 
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t CURRENT_TASK_HANDLE = NULL;
-static TaskHandle_t DISTURBNCE_TASK_HANDLE = NULL;
-
-static TaskHandle_t TEMPERATURE1_TASK_HANDLE = NULL;
-static TaskHandle_t TEMPERATURE2_TASK_HANDLE = NULL;
-static TaskHandle_t TEMPERATURE3_TASK_HANDLENULL;
-
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-
-static TaskHandle_t WEIGHT_TASK_HANDLE = NULL;
-static TaskHandle_t RPM_TASK_HANDLE = NULL;
 
 //=================================================================
 // LOGING TAGS
@@ -112,7 +97,41 @@ static const char *TAG = "DEBUG";
 
 #define COUNTING_NOTIFY pdFALSE
 #define BINARY_NOTIFY pdTRUE
+class Transmission_protocols
+{
+public:
+    virtual void send_data() = 0;
+};
 
+class Bluetooth : public Transmission_protocols
+{
+    void send_data() final
+    {
+    }
+};
+
+class TCP : public Transmission_protocols
+{
+    void send_data() final
+    {
+    }
+};
+
+class UDP : public Transmission_protocols
+{
+    void send_data() final
+    {
+    }
+};
+
+class UART : public Transmission_protocols
+{
+    void send_data() final
+    {
+    }
+};
+
+/// @brief 
 struct PACKET_DATA
 {
     uint32_t rpm;                    // done                    // Rotation per minute
@@ -135,6 +154,8 @@ static uint64_t final_rpm = 0;
 
 static struct PACKET_DATA packet_to_send = {0};
 
+/// @brief 
+/// @param arg 
 static void weight_reading_task(void *arg)
 {
     HX711_init(GPIO_SCALES_DATA, GPIO_SCLK, eGAIN_128);
@@ -166,6 +187,10 @@ static void weight_reading_task(void *arg)
 
 // Init function, create some cfgs, initialise adc
 */
+
+/// @brief 
+/// @param channel 
+/// @param channel_num 
 static void oneshot_adc_init(adc_channel_t *channel, uint8_t channel_num) // maybe remove parameters, bcz they're global
 {
     adc_oneshot_unit_handle_t handle = NULL;
@@ -194,8 +219,8 @@ static void oneshot_adc_init(adc_channel_t *channel, uint8_t channel_num) // may
 // ISR PINS
 //=================================================================
 
-#define ESP_INTR_FLAG_DEFAULT 0 // I think that flag is used to give us ability to handle all the GPIO separetely
-#define GPIO_INPUT_IO_0 GPIO_NUM_4//4
+#define ESP_INTR_FLAG_DEFAULT 0    // I think that flag is used to give us ability to handle all the GPIO separetely
+#define GPIO_INPUT_IO_0 GPIO_NUM_4 // 4
 #define GPIO_INPUT_PIN_SEL (1ULL << GPIO_INPUT_IO_0)
 
 /*
@@ -203,6 +228,8 @@ static void oneshot_adc_init(adc_channel_t *channel, uint8_t channel_num) // may
  * Use bitwise (<<,>>, |, & - mostly) operations to get desired pin
  * */
 
+/// @brief 
+/// @param arg  
 static void IRAM_ATTR gpio_rotation_isr_handler(void *arg)
 {
     rotation_count++;
@@ -210,6 +237,8 @@ static void IRAM_ATTR gpio_rotation_isr_handler(void *arg)
     printf("Got rotation");
 }
 
+/// @brief 
+/// @param arg 
 static void periodic_timer_callback(void *arg)
 {
     uint16_t count = rotation_count / AMOUNT_OF_WINGS;
@@ -220,6 +249,20 @@ static void periodic_timer_callback(void *arg)
     time_rpm = esp_timer_get_time();
     rotation_count = 0;
 }
+
+/// @brief 
+/// @param tag 
+/// @param sock 
+/// @param err 
+/// @param message 
+static void log_socket_error(const char *tag, const int sock, const int err, const char *message)
+{
+    ESP_LOGE(tag, "[sock=%d]: %s\n"
+                  "error=%d: %s", sock, message, err, strerror(err));
+}
+
+/// @brief 
+/// @param arg 
 static void rpm_safe_writing_task(void *arg)
 {
     for (;;)
@@ -238,20 +281,7 @@ static void rpm_safe_writing_task(void *arg)
         }
     }
 }
-/*
-static void rpm_calculation(void *arg) // arg - amount of rotations
-{
-    for (;;)
-    {
-        if (xQueueReceive(gpio_evt_queue, NULL, portMAX_DELAY))
-        {
-            rotation_count++; // maybe change it, so we can increment value in handler?
 
-            printf("Another rotation");
-        }
-    }
-}
-*/
 
 /// @brief
 /// @param arg
@@ -262,7 +292,7 @@ static void adc_reading_task(void *arg)
     uint32_t ret_num = 0;
     esp_err_t ret;
     uint8_t index;
-    
+
     adc_channel_t channel = *(adc_channel_t *)arg;
     int readings[10] = {0};
 
@@ -299,6 +329,19 @@ static void adc_reading_task(void *arg)
 
 void app_main(void)
 {
+    //=========================================================
+    //WIFI CONNECTION
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
+    wifi_init_sta();
+    //=========================================================
+
 
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = &periodic_timer_callback,
@@ -313,11 +356,11 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, ONE_SECOND_MS));
 
     gpio_config_t io_conf = {
-        GPIO_INPUT_PIN_SEL, // gpio mask
-        GPIO_MODE_INPUT,    /*!< GPIO mode: set input/output mode                     */
-        GPIO_PULLUP_DISABLE,                  /*!< GPIweight_reading_task-up                                         */
-        GPIO_PULLDOWN_DISABLE,                  /*!< GPIO pull-down                                       */
-        GPIO_INTR_POSEDGE,  /*!< GPIO interrupt type                                  */
+        GPIO_INPUT_PIN_SEL,    // gpio mask
+        GPIO_MODE_INPUT,       /*!< GPIO mode: set input/output mode                     */
+        GPIO_PULLUP_DISABLE,   /*!< GPIweight_reading_task-up                                         */
+        GPIO_PULLDOWN_DISABLE, /*!< GPIO pull-down                                       */
+        GPIO_INTR_POSEDGE,     /*!< GPIO interrupt type                                  */
     };
 
     gpio_config(&io_conf);
