@@ -1,5 +1,16 @@
 #include "tcp_connection.h"
 
+TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
+TaskHandle_t CURRENT_TASK_HANDLE = NULL;
+TaskHandle_t DISTURBNCE_TASK_HANDLE = NULL;
+
+TaskHandle_t TEMPERATURE1_TASK_HANDLE = NULL;
+TaskHandle_t TEMPERATURE2_TASK_HANDLE = NULL;
+TaskHandle_t TEMPERATURE3_TASK_HANDLE = NULL;
+
+TaskHandle_t WEIGHT_TASK_HANDLE = NULL;
+TaskHandle_t RPM_TASK_HANDLE = NULL;
+
 static void log_socket_error(const char *tag, const int sock, const int err, const char *message)
 {
     ESP_LOGE(tag, "[sock=%d]: %s\n"
@@ -67,7 +78,7 @@ class TCP : public Transmission_protocols
         xTaskNotify(WEIGHT_TASK_HANDLE, 0, eSetValueWithOverwrite);
         xTaskNotify(RPM_TASK_HANDLE, 0, eSetValueWithOverwrite);
 
-        static const char *payload = "GET / HTTP/1.1\r\n\r\n"; // add struct there
+        PACKET_DATA initial_payload = packet_to_send;
 
         xTaskNotify(VOLTAGE_TASK_HANDLE, 32000, eSetValueWithOverwrite);
         xTaskNotify(CURRENT_TASK_HANDLE, 32000, eSetValueWithOverwrite);
@@ -80,7 +91,9 @@ class TCP : public Transmission_protocols
         xTaskNotify(WEIGHT_TASK_HANDLE, 32000, eSetValueWithOverwrite);
         xTaskNotify(RPM_TASK_HANDLE, 32000, eSetValueWithOverwrite);
 
-        static_cast<byte *>(); // for crc
+        initial_payload.crc() = crc8(static_cast<char *>(&initial_payload), sizeof(initial_payload) - 1);
+        static const char *payload;
+        memcpy(&payload, &initial_payload, sizeof(initial_payload)); // add struct there
 
         struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
         struct addrinfo *address_info;

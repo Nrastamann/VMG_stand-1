@@ -1,6 +1,7 @@
 #pragma once
 extern "C"
 {
+}
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -13,7 +14,7 @@ extern "C"
 #include "nvs_flash.h"
 #include "syscalls.c"
 #include "fcntl.h"
-}
+#include "packets_and_sending.h"
 
 #define INVALID_SOCK (-1)
 
@@ -23,22 +24,16 @@ extern "C"
 // TASK HANDLERS(For notifies)
 //=================================================================
 
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t CURRENT_TASK_HANDLE = NULL;
-static TaskHandle_t DISTURBNCE_TASK_HANDLE = NULL;
+extern TaskHandle_t VOLTAGE_TASK_HANDLE;
+extern TaskHandle_t CURRENT_TASK_HANDLE;
+extern TaskHandle_t DISTURBNCE_TASK_HANDLE;
 
-static TaskHandle_t TEMPERATURE1_TASK_HANDLE = NULL;
-static TaskHandle_t TEMPERATURE2_TASK_HANDLE = NULL;
-static TaskHandle_t TEMPERATURE3_TASK_HANDLE = NULL;
+extern TaskHandle_t TEMPERATURE1_TASK_HANDLE;
+extern TaskHandle_t TEMPERATURE2_TASK_HANDLE;
+extern TaskHandle_t TEMPERATURE3_TASK_HANDLE;
 
-/*
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL;
-static TaskHandle_t VOLTAGE_TASK_HANDLE = NULL; I DON'T REMEMBER FOR WHAT IT IS
-*/
-
-static TaskHandle_t WEIGHT_TASK_HANDLE = NULL;
-static TaskHandle_t RPM_TASK_HANDLE = NULL;
+extern TaskHandle_t WEIGHT_TASK_HANDLE;
+extern TaskHandle_t RPM_TASK_HANDLE;
 
 //==================================================================
 //

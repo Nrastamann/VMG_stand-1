@@ -1,5 +1,7 @@
 #pragma once
 
+#include "freertos/FreeRTOS.h"
+#include "packets_and_sending.h"
 #include "HX711.h"
 #include "rpm_counter.h"
 //=================================================================

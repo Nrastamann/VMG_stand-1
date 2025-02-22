@@ -33,7 +33,7 @@ static void rpm_safe_writing_task(void *arg)
         {
             ulTaskNotifyTake(COUNTING_NOTIFY, pdMS_TO_TICKS(ONE_SECOND_MS * 5));
 
-            packet_to_send.rpm = final_rpm;
+            packet_to_send.rpm(final_rpm);
 
             final_rpm = 0;
         }

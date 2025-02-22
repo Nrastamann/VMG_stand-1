@@ -26,7 +26,7 @@ extern "C"
 #include "wifi_connection.h"
 #include "tcp_connection.h"
 #include "HX711_reading.h"
-
+#include "packets_and_sending.h"
 
 /**
  * Brief:
@@ -56,60 +56,6 @@ static const char *MAIN_TAG = "MAIN";
 
 #define COUNTING_NOTIFY pdFALSE
 #define BINARY_NOTIFY pdTRUE
-class Transmission_protocols
-{
-public:
-    virtual void send_data() = 0;
-};
-
-class Bluetooth : public Transmission_protocols
-{
-    void send_data() final
-    {
-    }
-};
-
-class UDP : public Transmission_protocols
-{
-    void send_data() final
-    {
-    }
-};
-
-class UART : public Transmission_protocols
-{
-    void send_data() final
-    {
-    }
-};
-
-byte crc8(byte *buffer, byte size) {
-    byte crc = 0;
-    for (byte i = 0; i < size; i++) {
-      byte data = buffer[i];
-      for (int j = 8; j > 0; j--) {
-        crc = ((crc ^ data) & 1) ? (crc >> 1) ^ 0x8C : (crc >> 1);
-        data >>= 1;
-      }
-    }
-    return crc;
-  }
-
-/// @brief 
-struct PACKET_DATA
-{
-    uint32_t rpm;                    // done                    // Rotation per minute
-    uint32_t ADC_Readings[ADC_USED]; // done  // current * 1000, voltage * 1000, and disturbance idk, I'll figure it out, when understand how voltage/current sensor works
-    uint16_t temperature_1;          // I'll change this name, I promisse
-    uint16_t temperature_2;          // I'll change this name, I promisse
-    uint16_t temperature_3;          // I'll change this name, I promisse
-    uint32_t weight;                 // done         // I guess * 1000
-    byte crc;                        //crc
-    // maybeeee use smth like byte array to faster the process? also need to add some like
-    // test code? to check if msg wasn't corrupted
-};
-
-static struct PACKET_DATA packet_to_send = {0};
 
 void app_main(void)
 {
@@ -164,6 +110,8 @@ void app_main(void)
     xTaskCreate(adc_reading_task, "ADC_Disturbance", 2048, (void *)ADC_DISTURBANCE, 10, &DISTURBNCE_TASK_HANDLE); // check priorities, last null - handler
 
     xTaskCreate(rpm_safe_writing_task, "Writing_RPM", 2048, NULL, 10, &RPM_TASK_HANDLE);
+
+    xTaskCreate(connect)
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 

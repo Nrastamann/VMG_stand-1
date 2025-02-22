@@ -66,7 +66,7 @@ static void adc_reading_task(void *arg)
 
         ulTaskNotifyTake(COUNTING_NOTIFY, pdMS_TO_TICKS(ONE_SECOND_MS));
 
-        packet_to_send.ADC_Readings[index] = readings[0];
+        packet_to_send.adc_set(readings[0], index);
 
         vTaskDelay(10);
     }
