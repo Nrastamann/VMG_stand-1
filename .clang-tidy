@@ -1,0 +1,80 @@
+---
+Checks: '-*,
+clang-analyzer-*,
+concurrency-*,
+modernize-*,
+-modernize-use-trailing-return-type,
+performance-*,
+portability-*,
+bugprone-*,
+-bugprone-easily-swappable-parameters,
+cert-err52-cpp,
+cert-err60-cpp,
+cert-err34-c,
+cert-err33-c,
+cert-mem57-cpp,
+cert-oop11-cpp,
+cert-msc50-cpp,
+cert-env33-c,
+cert-oop58-cpp,
+cert-dcl50-cpp,
+cert-oop57-cpp,
+cert-msc51-cpp,
+cert-err58-cpp,
+cert-dcl58-cpp,
+cert-flp30-c,
+cppcoreguidelines-*,
+-cppcoreguidelines-macro-to-enum,
+-cppcoreguidelines-non-private-member-variables-in-classes,
+-cppcoreguidelines-use-default-member-init,
+-cppcoreguidelines-explicit-virtual-functions,
+-cppcoreguidelines-noexcept-swap,
+-cppcoreguidelines-noexcept-destructor,
+-cppcoreguidelines-c-copy-assignment-signature,
+-cppcoreguidelines-avoid-magic-numbers,
+-cppcoreguidelines-avoid-c-arrays,
+-cppcoreguidelines-noexcept-move-operations,
+google-default-arguments,
+google-build-explicit-make-pair,
+google-global-names-in-headers,
+google-readability-todo,
+google-runtime-int,
+google-runtime-operator,
+google-explicit-constructor,
+google-build-using-namespace,
+llvm-namespace-comment,
+misc-*,
+-misc-use-anonymous-namespace,
+-misc-no-recursion,
+-misc-non-private-member-variables-in-classes,
+readability-*,
+-readability-named-parameter,
+-readability-identifier-length,
+-readability-braces-around-statements,
+-readability-function-cognitive-complexity'
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  - key: readability-identifier-naming.MemberPrefix
+    value: '_'
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case

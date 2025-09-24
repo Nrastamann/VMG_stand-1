@@ -1,0 +1,25 @@
+---
+BasedOnStyle: Google
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCompound: true
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCompound: true
+  AlignFunctionPointers: true
+  PadOperators: true
+AlignConsecutiveMacros:
+  Enabled: true
+AllowShortEnumsOnASingleLine: false
+BreakAfterReturnType: AllDefinitions
+BreakBeforeBraces: Stroustrup
+BreakConstructorInitializers: AfterColon
+DerivePointerAlignment: false
+InsertBraces: true
+NamespaceIndentation: All
+QualifierAlignment: Right
