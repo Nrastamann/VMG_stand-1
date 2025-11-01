@@ -3,7 +3,7 @@
 static const char* TAG = "TESTING";
 struct TestingMethods{
     static void init_test_packet(){
-        packet_to_send.rpm_set(0x61+0x00610000+0x00006100+0x61000000);
+        packet_to_send.rpm_set(0);
     }
 
     static void log_packet_data(){

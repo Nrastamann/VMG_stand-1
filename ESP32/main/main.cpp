@@ -61,6 +61,7 @@ app_main()
   TestingMethods::init_test_packet();
   //=========================================================
   // WIFI CONNECTION
+/*
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -73,6 +74,7 @@ app_main()
 
   wifi_init_sta();
   setup_pin_for_weights();
+  */
   //=========================================================
 
   esp_timer_create_args_t const periodic_timer_args = {
@@ -94,6 +96,7 @@ app_main()
       GPIO_PULLDOWN_DISABLE, /*!< GPIO pull-down */
       GPIO_INTR_POSEDGE,     /*!< GPIO interrupt type     */
   };
+  /*
   TCP transmission;
   analogue_reader.change_bitmask(0);
   analogue_reader.change_bitmask(1);
@@ -104,7 +107,9 @@ app_main()
   analogue_reader.change_bitmask(6);
   analogue_reader.change_bitmask(7);
   analogue_reader.change_bitmask(8);
+*/
   gpio_config(&io_conf);
+
   std::array<int, ADC_MAX_AMOUNT> adc_sensors = {0, 1, 2, 3, 4, 5, 6, 7};
 
   // install gpio isr service
@@ -114,24 +119,25 @@ app_main()
   ESP_ERROR_CHECK(
       gpio_isr_handler_add(GPIO_INPUT_IO_0, gpio_rotation_isr_handler, NULL));
 
-  analogue_reader.oneshot_adc_init();
+  //analogue_reader.oneshot_adc_init();
 /*
   xTaskCreatePinnedToCore(weight_reading_task, "Weight_reading", 4096, NULL, 15,
                           &WEIGHT_TASK_HANDLE, tskNO_AFFINITY);
 */
-
+/*
   xTaskCreatePinnedToCore(transmission_task, "Sending task", 4096,
                           &transmission, 20, &SEND_TASK_HANDLE, 0);
-
+*/
   /*xTaskCreatePinnedToCore(adc_reading_task, "ADC_Voltage", 2048,
                           &adc_sensors[0], 10, &VOLTAGE_TASK_HANDLE,
                           1);  // check priorities, last null - handler
   */
   /*xTaskCreatePinnedToCore(adc_reading_task, "ADC_Current", 2048,
                         &adc_sensors[1], 10, &CURRENT_TASK_HANDLE, 1);
-*/xTaskCreatePinnedToCore(uart_task, "reading_adc_from_uart", 4096, NULL, 10,
+*/
+/*xTaskCreatePinnedToCore(uart_task, "reading_adc_from_uart", 4096, NULL, 10,
                            &UART_TASK_HANDLE, tskNO_AFFINITY); 
-  // check priorities, last null - handler
+*/  // check priorities, last null - handler
   /* xTaskCreatePinnedToCore(adc_reading_task, "ADC_Disturbance",
      2048,&adc_sensors[2], 10, &DISTURBNCE_TASK_HANDLE, 1);  // check
      priorities, last null - handler

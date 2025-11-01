@@ -43,5 +43,5 @@ void rpm_safe_writing_task(void* arg);
 //=================================================================
 
 extern uint64_t time_rpm;
-extern uint16_t rotation_count;
+extern uint64_t rotation_count;
 extern uint64_t final_rpm;
