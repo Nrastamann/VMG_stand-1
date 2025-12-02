@@ -10,7 +10,7 @@ extern "C"
 #include "freertos/semphr.h"
 
 #include "driver/gpio.h"
-
+#include "gpio.h"
 #include "sdkconfig.h"
 #include "esp_timer.h"
 #include "esp_sleep.h"
@@ -25,7 +25,6 @@ extern "C"
 #include "rpm_counter.h"
 #include "wifi_connection.h"
 #include "tcp_connection.h"
-#include "HX711_reading.h"
 #include "packets_and_sending.h"
 
 /**
@@ -59,6 +58,8 @@ static const char *MAIN_TAG = "MAIN";
 
 void app_main(void)
 {
+ESP_ERROR_CHECK(adc2_vref_to_gpio(GPIO_NUM_32));
+printf("VREF routed to ADC2, pin 25\n");
     //=========================================================
     //WIFI CONNECTION
     /*

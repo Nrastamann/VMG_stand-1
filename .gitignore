@@ -21,3 +21,4 @@ managed_components*
 ESP32Code/README*
 dependencies.lock
 .vscode
+*.idx
