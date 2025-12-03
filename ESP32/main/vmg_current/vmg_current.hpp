@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
 class vmg_current_driver;
 
 constexpr uint8_t MULTISAMPLING_RATE{10};
@@ -21,7 +23,7 @@ class vmg_current_sensor {
 
  private:
   class sensor {
-    std::vector<uint16_t, MULTISAMPLING_RATE> raw_data;
+    std::array<uint16_t, MULTISAMPLING_RATE> raw_data;
 
     uint32_t last_update_ms;
     uint32_t last_change_ms;

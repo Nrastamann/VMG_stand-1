@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <memory>
 
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_continuous.h"
@@ -13,6 +14,9 @@ constexpr bool NO_DEFAULT_VREF{false};
 constexpr size_t AMOUNT_OF_ADC_SENSORS{2};
 constexpr size_t SAMPLE_FREQUENCY{20000};
 constexpr size_t ADC_RANGE{4096};
+
+inline extern constexpr size_t ADC_BUFFER_SIZE{1024};
+inline extern constexpr size_t ADC_FRAME_SIZE{256};
 
 class vmg_adc_driver {
  public:
@@ -31,29 +35,14 @@ class vmg_adc_driver {
   void calibration_init();
   void calibration_deinit();
 #endif
-
-  void
-  stop_driver()
-  {
-    ESP_ERROR_CHECK(adc_continuous_stop(*this->_handle));
-  }
-  void
-  start_driver()
-  {
-    ESP_ERROR_CHECK(adc_continuous_start(*this->_handle));
-  }
-  adc_continuous_handle_t*
-  get_handle()
-  {
-    return this->_handle;
-  }
-
   void stop_and_deinit_driver();
   void init_driver();
 
   void config_digi_pattern(size_t index, adc_channel_t channel, adc_unit_t unit,
                            adc_bitwidth_t bitwidth, adc_atten_t attenuation);
   void setup_digi_pattern();
+  void config_adc(adc_digi_convert_mode_t convert = ADC_CONV_SINGLE_UNIT_1,
+                  uint32_t frequency              = SAMPLE_FREQUENCY);
 
   void
   config_digi_pattern(size_t index, adc_channel_t channel)
@@ -75,9 +64,21 @@ class vmg_adc_driver {
   {
     this->_unit = unit;
   }
-
-  void config_adc(adc_digi_convert_mode_t convert = ADC_CONV_SINGLE_UNIT_1,
-                  uint32_t frequency              = SAMPLE_FREQUENCY);
+  void
+  stop_driver()
+  {
+    ESP_ERROR_CHECK(adc_continuous_stop(*this->_handle));
+  }
+  void
+  start_driver()
+  {
+    ESP_ERROR_CHECK(adc_continuous_start(*this->_handle));
+  }
+  adc_continuous_handle_t*
+  get_handle()
+  {
+    return this->_handle;
+  }
 
  private:
   size_t _adc_amount               = AMOUNT_OF_ADC_SENSORS;
@@ -94,4 +95,19 @@ class vmg_adc_driver {
 #else
   adc_cali_handle_t* _cali_handle = nullptr;
 #endif
+};
+
+struct adc_subscriber {
+  std::shared_ptr<vmg_adc_driver*> adc = new vmg_adc_driver*;
+  std::array<uint8_t, ADC_FRAME_SIZE>;
+  void
+  set_ref(vmg_adc_driver* driver)
+  {
+    this->adc = driver;
+  }
+  vmg_adc_driver*
+  get_ref()
+  {
+    return *this->adc;
+  }
 };

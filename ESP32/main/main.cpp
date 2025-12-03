@@ -4,20 +4,22 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 
 #include "adc_reading.hpp"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
 #include "hal/adc_types.h"
-
-constexpr static size_t ADC_BUFFER_SIZE{1024};
-constexpr static size_t ADC_FRAME_SIZE{256};
+#include "vmg_utility/adc_driver.hpp"
 
 void
 app_main()
 {
-  vmg_adc_driver driver =
-      vmg_adc_driver(AMOUNT_OF_ADC_SENSORS, ADC_BUFFER_SIZE, ADC_FRAME_SIZE);
+  vmg_adc_driver driver = {AMOUNT_OF_ADC_SENSORS, ADC_BUFFER_SIZE,
+                           ADC_FRAME_SIZE};
+  adc_subscriber adc_ref;
+  adc_ref.set_ref(&driver);
+
   driver.init_driver();
   driver.calibration_init();
 
