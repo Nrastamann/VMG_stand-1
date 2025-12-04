@@ -1,9 +1,14 @@
 #include "adc_driver.hpp"
 
+#include <cstdint>
+
+#include "driver/adc.h"
+#include "driver/adc_types_legacy.h"
 #include "esp_adc/adc_cali_scheme.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
-
+#include "hal/adc_types.h"
+#include "soc/soc_caps.h"
 #if lut_usage
 float
 vmg_adc_driver::get_lut(size_t reading)
@@ -66,9 +71,11 @@ vmg_adc_driver::init_driver()
   ESP_ERROR_CHECK(adc_continuous_new_handle(&handle_config, this->_handle));
 }
 void
-vmg_adc_driver::config_digi_pattern(size_t index, adc_channel_t channel,
-                                    adc_unit_t unit, adc_bitwidth_t bitwidth,
-                                    adc_atten_t attenuation)
+vmg_adc_driver::config_digi_pattern(size_t const index,
+                                    adc_channel_t const channel,
+                                    adc_unit_t const unit,
+                                    adc_bitwidth_t const bitwidth,
+                                    adc_atten_t const attenuation)
 {
   this->_digi_patt[index] = adc_digi_pattern_config_t{
       .atten     = static_cast<uint8_t>(attenuation),
@@ -88,7 +95,8 @@ vmg_adc_driver::setup_digi_pattern()
 }
 
 void
-vmg_adc_driver::config_adc(adc_digi_convert_mode_t convert, uint32_t frequency)
+vmg_adc_driver::config_adc(adc_digi_convert_mode_t const convert,
+                           uint32_t const frequency)
 {
   adc_continuous_config_t adc_config = {
       .pattern_num    = static_cast<uint32_t>(this->_adc_amount),
@@ -99,4 +107,43 @@ vmg_adc_driver::config_adc(adc_digi_convert_mode_t convert, uint32_t frequency)
   };
 
   ESP_ERROR_CHECK(adc_continuous_config(*this->_handle, &adc_config));
+}
+
+int
+vmg_adc_driver::get_data(adc_subscriber& subscriber)
+{
+  uint32_t read_length;
+
+  return adc_continuous_read(*this->_handle, subscriber.get_buffer().begin(),
+                             ADC_FRAME_SIZE, &read_length, 0) == ESP_OK
+             ? read_length
+             : -1;
+}
+
+uint64_t
+adc_subscriber::get_data()
+{
+  size_t len   = this->adc.get_data(this);
+  size_t count = 1;
+  uint64_t sum = 0;
+  for (size_t i = 0; i < len; i += SOC_ADC_DIGI_RESULT_BYTES) {
+    auto* p = reinterpret_cast<adc_digi_output_data_t*>(&this->buffer[i]);
+    if (p->type1.channel >= ADC1_CHANNEL_MAX) {
+      if (p->type1.data > 100) {  // > ~0.1V
+        sum   += p->type1.data;
+        count += 1;
+      }
+    }
+  }
+  sum /= count;
+#if lut
+  return this->adc_lut();  // idk check tmrw
+#endif
+  return sum;
+}
+
+std::array<uint8_t, ADC_FRAME_SIZE>&
+adc_subscriber::get_buffer()
+{
+  return this->buffer;
 }

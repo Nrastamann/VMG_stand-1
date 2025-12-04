@@ -7,11 +7,11 @@
 #include <memory>
 
 #include "adc_reading.hpp"
+#include "driver/adc.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
 #include "hal/adc_types.h"
 #include "vmg_utility/adc_driver.hpp"
-
 void
 app_main()
 {
@@ -35,18 +35,11 @@ app_main()
 
   driver.start_driver();
 
-  std::array<uint8_t, ADC_FRAME_SIZE> buf{};
-  esp_err_t ret = 0;
-  uint32_t read_length{};
-
   while (true) {
-    ret = adc_continuous_read(*driver.get_handle(), buf.begin(),
-                              static_cast<uint32_t>(ADC_FRAME_SIZE),
-                              &read_length, 0);
-    if (ret == ESP_OK) {
-      for (size_t i = 0; i < read_length; i += SOC_ADC_DIGI_RESULT_BYTES) {
-        auto* p       = reinterpret_cast<adc_digi_output_data_t*>(&buf[i]);
-        uint32_t data = p->type1.data;
+    if (size_t res = adc_ref.get_data(); res != -1) {
+      for (size_t i = 0; i < res; i += SOC_ADC_DIGI_RESULT_BYTES) {
+        auto* p =
+            reinterpret_cast<adc_digi_output_data_t*>(&adc_ref.get_buffer()[i]);
       }
     }
   }

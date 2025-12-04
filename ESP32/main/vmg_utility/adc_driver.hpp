@@ -6,6 +6,8 @@
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
+#include "hal/adc_types.h"
+#include "soc/soc_caps.h"
 
 constexpr bool lut_usage{false};
 constexpr bool curve_fitting{true};
@@ -15,8 +17,12 @@ constexpr size_t AMOUNT_OF_ADC_SENSORS{2};
 constexpr size_t SAMPLE_FREQUENCY{20000};
 constexpr size_t ADC_RANGE{4096};
 
-inline extern constexpr size_t ADC_BUFFER_SIZE{1024};
-inline extern constexpr size_t ADC_FRAME_SIZE{256};
+constexpr uint8_t MULTISAMPLING_RATE{10};
+inline extern constexpr size_t ADC_FRAME_SIZE{SOC_ADC_DIGI_RESULT_BYTES *
+                                              MULTISAMPLING_RATE};
+inline extern constexpr size_t ADC_BUFFER_SIZE{ADC_FRAME_SIZE * 4};
+
+class adc_subscriber;
 
 class vmg_adc_driver {
  public:
@@ -80,6 +86,20 @@ class vmg_adc_driver {
     return this->_handle;
   }
 
+  int get_data(adc_subscriber& subscriber);
+
+  size_t
+  get_channel_index(adc_channel_t channel_num)
+  {
+    size_t index = 0;
+    for (auto const i : this->_digi_patt) {
+      if (i.channel == channel_num) {
+        return index;
+      }
+      index++;
+    }
+  }
+
  private:
   size_t _adc_amount               = AMOUNT_OF_ADC_SENSORS;
   adc_continuous_handle_t* _handle = nullptr;
@@ -97,9 +117,8 @@ class vmg_adc_driver {
 #endif
 };
 
-struct adc_subscriber {
-  std::shared_ptr<vmg_adc_driver*> adc = new vmg_adc_driver*;
-  std::array<uint8_t, ADC_FRAME_SIZE>;
+class adc_subscriber {
+ public:
   void
   set_ref(vmg_adc_driver* driver)
   {
@@ -110,4 +129,11 @@ struct adc_subscriber {
   {
     return *this->adc;
   }
+
+  int get_data();
+  std::array<uint8_t, ADC_FRAME_SIZE>& get_buffer();
+
+ private:
+  std::shared_ptr<vmg_adc_driver*> adc = new vmg_adc_driver*;
+  std::array<uint8_t, ADC_FRAME_SIZE> buffer;
 };
