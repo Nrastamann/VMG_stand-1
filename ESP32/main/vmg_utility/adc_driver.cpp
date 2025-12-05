@@ -121,7 +121,7 @@ vmg_adc_driver::get_data(adc_subscriber& subscriber)
 }
 
 uint64_t
-adc_subscriber::get_data()
+adc_subscriber::getData()
 {
   size_t len   = this->adc.get_data(this);
   size_t count = 1;
@@ -135,9 +135,11 @@ adc_subscriber::get_data()
       }
     }
   }
-  sum /= count;
+  if (count != 1) {
+    sum /= --count;
+  }
 #if lut
-  return this->adc_lut();  // idk check tmrw
+  return this->adc->get_lut(sum);
 #endif
   return sum;
 }

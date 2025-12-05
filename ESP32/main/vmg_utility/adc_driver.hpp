@@ -120,17 +120,17 @@ class vmg_adc_driver {
 class adc_subscriber {
  public:
   void
-  set_ref(vmg_adc_driver* driver)
+  setRef(vmg_adc_driver* driver)
   {
     this->adc = driver;
   }
   vmg_adc_driver*
-  get_ref()
+  getRef()
   {
     return *this->adc;
   }
 
-  int get_data();
+  uint64_t getData();
   std::array<uint8_t, ADC_FRAME_SIZE>& get_buffer();
 
  private:
