@@ -15,22 +15,22 @@ class vmg_current_acs758 : public vmg_current_driver {
 
   void update() override;
   void
-  set_adc_buffer(adc_subscriber&& adc_instance)
+  setAdcSubscription(adc_subscriber&& adc_instance)
   {
-    this->adc_instance = adc_instance;
+    this->_adc_instance = std::move(adc_instance);
   }
 
  private:
-  bool _probe();
+  bool probe();
 
-  void _read_raw();
-  void _calculate();
-  bool _data_ready();
+  void readRaw();
+  void calculate();
+  bool dataReady();
 
   bool _has_sample;
   std::array<uint32_t, MULTISAMPLE_AMOUNT> _raw_readings;
   uint32_t _raw_current;
   float _ref_voltage = REFERENCE_VOLTAGE;
   uint32_t _current;
-  adc_subscriber adc_instance;
+  adc_subscriber _adc_instance;
 };

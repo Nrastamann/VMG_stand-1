@@ -1,6 +1,8 @@
 #include "adc_driver.hpp"
 
 #include <cstdint>
+#include <memory>
+#include <optional>
 
 #include "driver/adc.h"
 #include "driver/adc_types_legacy.h"
@@ -28,12 +30,11 @@ vmg_adc_driver::calibration_init()
   }
 };
 #else
-  adc_cali_line_fitting_config_t cali_config = {.unit_id  = this->_unit,
-                                                .atten    = this->_attenuation,
-                                                .bitwidth = this->_bitwidth,
-#if NO_DEFAULT_VREF
-                                                .default_vref = 1100
-#endif
+  adc_cali_line_fitting_config_t cali_config = {
+      .unit_id      = this->_unit,
+      .atten        = this->_attenuation,
+      .bitwidth     = this->_bitwidth,
+      .default_vref = VREF,
   };
   ESP_ERROR_CHECK(
       adc_cali_create_scheme_line_fitting(&cali_config, this->_cali_handle));
@@ -109,43 +110,49 @@ vmg_adc_driver::config_adc(adc_digi_convert_mode_t const convert,
   ESP_ERROR_CHECK(adc_continuous_config(*this->_handle, &adc_config));
 }
 
-int
-vmg_adc_driver::get_data(adc_subscriber& subscriber)
+std::optional<size_t>
+vmg_adc_driver::get_data(std::shared_ptr<adc_dma_storage*> storage)
 {
   uint32_t read_length;
 
-  return adc_continuous_read(*this->_handle, subscriber.get_buffer().begin(),
+  return adc_continuous_read(*this->_handle, *storage->getRawBuffer(),
                              ADC_FRAME_SIZE, &read_length, 0) == ESP_OK
              ? read_length
-             : -1;
+             : std::nullopt;
 }
 
-uint64_t
-adc_subscriber::getData()
+void
+vmg_adc_driver::refill_buffer(std::shared_ptr<adc_dma_storage*> storage)
 {
-  size_t len   = this->adc.get_data(this);
-  size_t count = 1;
-  uint64_t sum = 0;
-  for (size_t i = 0; i < len; i += SOC_ADC_DIGI_RESULT_BYTES) {
-    auto* p = reinterpret_cast<adc_digi_output_data_t*>(&this->buffer[i]);
+  size_t len = this->get_data(storage).value_or(0);
+  auto it    = (*storage)->getRawBuffer();
+  auto map   = (*storage)->getMap();
+
+  for (size_t i  = 0; i < len;
+       i += SOC_ADC_DIGI_RESULT_BYTES, it += SOC_ADC_DIGI_RESULT_BYTES) {
+    auto* p = reinterpret_cast<adc_digi_output_data_t*>(it);
     if (p->type1.channel >= ADC1_CHANNEL_MAX) {
       if (p->type1.data > 100) {  // > ~0.1V
-        sum   += p->type1.data;
-        count += 1;
+        map[p->type1.channel].value += p->type1.data;
+        map[p->type1.channel].count += 1;
       }
     }
   }
-  if (count != 1) {
-    sum /= --count;
-  }
+
+  for (auto& i : map) {
+    if (i.second.count != 1) {
+      i.second.value /= --i.second.count;
+    }
 #if lut
-  return this->adc->get_lut(sum);
+    i.second.value = this->adc->get_lut(i.second.value);
 #endif
-  return sum;
+    i.second.value *= VREF;
+    i.second.value /= 4095;
+  }
 }
 
-std::array<uint8_t, ADC_FRAME_SIZE>&
-adc_subscriber::get_buffer()
+uint64_t
+adc_subscriber::getData(adc_channel_t channel)
 {
-  return this->buffer;
+  return *storage->getParsed(channel).value_or(0);
 }

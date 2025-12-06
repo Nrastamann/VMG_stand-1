@@ -31,7 +31,7 @@ app_main()
   driver.start_driver();
   uint64_t avg_voltage;
   while (true) {
-    avg_voltage = adc_ref.getData();
+    avg_voltage = adc_ref.getData(ADC_CHANNEL_1);
     std::cout << avg_voltage << '\n';
   }
 

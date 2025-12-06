@@ -2,6 +2,10 @@
 
 #include <array>
 #include <memory>
+#include <optional>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_continuous.h"
@@ -17,11 +21,19 @@ constexpr size_t AMOUNT_OF_ADC_SENSORS{2};
 constexpr size_t SAMPLE_FREQUENCY{20000};
 constexpr size_t ADC_RANGE{4096};
 
+constexpr uint16_t VREF = 1100;
 constexpr uint8_t MULTISAMPLING_RATE{10};
+
 inline extern constexpr size_t ADC_FRAME_SIZE{SOC_ADC_DIGI_RESULT_BYTES *
-                                              MULTISAMPLING_RATE};
+                                              MULTISAMPLING_RATE *
+                                              (AMOUNT_OF_ADC_SENSORS + 1)};
 inline extern constexpr size_t ADC_BUFFER_SIZE{ADC_FRAME_SIZE * 4};
 
+enum class ADC_ERROR {
+  smth = 0
+};
+
+class adc_dma_storage;
 class adc_subscriber;
 
 class vmg_adc_driver {
@@ -35,6 +47,7 @@ class vmg_adc_driver {
   }
   vmg_adc_driver() = delete;
 
+  void refill_buffer(std::shared_ptr<adc_dma_storage*> storage);
 #if lut_usage
   float get_lut(size_t reading);
 #else
@@ -86,7 +99,7 @@ class vmg_adc_driver {
     return this->_handle;
   }
 
-  int get_data(adc_subscriber& subscriber);
+  std::optional<size_t> get_data(std::shared_ptr<adc_dma_storage*> storage);
 
   size_t
   get_channel_index(adc_channel_t channel_num)
@@ -122,18 +135,56 @@ class adc_subscriber {
   void
   setRef(vmg_adc_driver* driver)
   {
-    this->adc = driver;
+    storage = std::make_shared<vmg_adc_driver*>(driver);
   }
   vmg_adc_driver*
   getRef()
   {
-    return *this->adc;
+    return *storage;
   }
 
-  uint64_t getData();
-  std::array<uint8_t, ADC_FRAME_SIZE>& get_buffer();
+  uint64_t getData(adc_channel_t channel);
 
  private:
-  std::shared_ptr<vmg_adc_driver*> adc = new vmg_adc_driver*;
-  std::array<uint8_t, ADC_FRAME_SIZE> buffer;
+  std::shared_ptr<adc_dma_storage*> storage = nullptr;
+};
+
+struct adc_object {
+  uint64_t value;
+  size_t count;
+};
+
+class adc_dma_storage {
+ public:
+  auto
+  getRawBuffer()
+  {
+    return _buffer_raw.begin();
+  }
+
+  std::optional<uint64_t>
+  getParsed(adc_channel_t channel_num)
+  {
+    auto& it = _parsed_data.find(channel_num);
+    return it != _parsed_data.end() ? *it.value : std::nullopt;
+  }
+  std::unordered_map<adc_channel_t, adc_object>&
+  getMap()
+  {
+    for (auto& i : _parsed_data) {
+      i.second.value = 0;
+      i.second.count = 1;
+    }
+    return _parsed_data;
+  }
+  void
+  clear()
+  {
+    _parsed_data.clear();
+  }
+
+ private:
+  std::array<uint8_t, ADC_FRAME_SIZE> _buffer_raw;
+  std::unordered_map<adc_channel_t, adc_object> _parsed_data;
+  // mutex, or make this mechanism in tasks, idk
 };
