@@ -133,6 +133,11 @@ class vmg_adc_driver {
 class adc_subscriber {
  public:
   adc_subscriber(adc_channel_t channel) : _channel(channel) {}
+  adc_subscriber(adc_channel_t channel, adc_dma_storage* storage) :
+      _channel(channel), storage(std::make_shared<adc_dma_storage*>(storage))
+  {
+  }
+
   void
   setRef(vmg_adc_driver* driver)
   {

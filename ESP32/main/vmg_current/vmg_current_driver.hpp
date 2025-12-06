@@ -10,5 +10,4 @@ class vmg_current_backend {
   virtual ~vmg_current_backend() = default;
 
   static void copyToSensor(Sensor data, uint64_t current);
-  virtual void init() = 0;
 };

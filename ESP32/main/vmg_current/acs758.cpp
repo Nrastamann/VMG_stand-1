@@ -31,9 +31,3 @@ vmg_current_acs758::calculate()
   _current      = (temp - _zero_voltage) / _voltage_to_current;
   _has_sample   = true;
 }
-
-bool
-vmg_current_acs758::dataReady()
-{
-  return _has_sample;
-}
