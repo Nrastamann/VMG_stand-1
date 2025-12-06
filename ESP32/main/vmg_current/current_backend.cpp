@@ -1,7 +1,7 @@
-#include "vmg_current_driver.hpp"
+#include "current_backend.hpp"
 
 void
-vmg_current_backend::copyToSensor(Sensor data, uint64_t current)
+vmg_current_backend::copyToSensor(SensorCurrent data, uint64_t current)
 {
   // data._last_update_ms = current_time;
   // data.healthy?

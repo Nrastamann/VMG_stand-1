@@ -1,4 +1,4 @@
-#include "vmg_current.hpp"
+#include "current_driver.hpp"
 
 #include <memory>
 

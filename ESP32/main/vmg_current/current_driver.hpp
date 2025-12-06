@@ -6,11 +6,11 @@
 
 class vmg_current_backend;
 
-constexpr uint8_t MULTISAMPLING_RATE{10};
-constexpr uint8_t CURRENT_MAX_AMOUNT{3};
-constexpr uint8_t CURRENT_MAX_AMOUNT_DRIVERS{3};
+static constexpr uint8_t MULTISAMPLING_RATE{10};
+static constexpr uint8_t CURRENT_MAX_AMOUNT{3};
+static constexpr uint8_t CURRENT_MAX_AMOUNT_DRIVERS{3};
 
-struct Sensor {
+struct SensorCurrent {
   uint32_t _last_update_ms;
   uint32_t _last_change_ms;
 
@@ -50,7 +50,7 @@ class vmg_current_driver {
   }
 
  private:
-  std::array<Sensor, CURRENT_MAX_AMOUNT> _sensors;
+  std::array<SensorCurrent, CURRENT_MAX_AMOUNT> _sensors;
   std::array<std::unique_ptr<vmg_current_backend*>, CURRENT_MAX_AMOUNT_DRIVERS>
       _drivers;
 

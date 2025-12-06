@@ -1,10 +1,10 @@
 #include "acs758.hpp"
 
+#include "current_backend.hpp"
+#include "current_driver.hpp"
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 #include "hal/adc_types.h"
-#include "vmg_current.hpp"
-#include "vmg_current_driver.hpp"
 #include "vmg_utility/adc_driver.hpp"
 bool
 vmg_current_acs758::probe()
