@@ -152,7 +152,7 @@ vmg_adc_driver::refill_buffer(std::shared_ptr<adc_dma_storage*> storage)
 }
 
 uint64_t
-adc_subscriber::getData(adc_channel_t channel)
+adc_subscriber::getData()
 {
-  return *storage->getParsed(channel).value_or(0);
+  return *storage->getParsed(_channel).value_or(UINT64_MAX);
 }

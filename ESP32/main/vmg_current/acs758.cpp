@@ -5,54 +5,35 @@
 #include "hal/adc_types.h"
 #include "vmg_current.hpp"
 #include "vmg_current_driver.hpp"
-
-constexpr uint32_t DEFAULT_VREF{
-    1100};  // in mV, used if eFuse values is not available
-
-vmg_current_acs758::vmg_current_acs758(vmg_current_sensor& driver,
-                                       adc1_channel_t channel,
-                                       adc_atten_t adc_attenuation) :
-
-    vmg_current_driver(driver, channel, adc_attenuation)
-{
-  adc1_config_channel_atten(channel, adc_attenuation);
-  adc1_config_width(ADC_WIDTH_BIT_12);
-
-  esp_adc_cal_characteristics_t adcn_chars;
-
-  // get callibration values
-  esp_adc_cal_characterize(ADC_UNIT_1, adc_attenuation, ADC_WIDTH_BIT_12, 0,
-                           &adcn_chars);
-
-  // need to like somehow pick the best way to pick between
-}
-
+#include "vmg_utility/adc_driver.hpp"
 bool
 vmg_current_acs758::probe()
 {
-  // read some values and if they're valid = probe done right and driver is
-  // healthy
+  return _adc_instance.getData() != UINT64_MAX;
 }
 
 void
 vmg_current_acs758::update()
 {
-  // need to read data and write it to frontend
+  readRaw();
 }
 
 void
 vmg_current_acs758::readRaw()
 {
+  _raw_current = _adc_instance.getData();
 }
 
 void
-vmg_current_acs758::Calculate()
+vmg_current_acs758::calculate()
 {
+  uint64_t temp = _raw_current * DEFAULT_SENSOR_VOLTAGE / VREF;
+  _current      = (temp - _zero_voltage) / _voltage_to_current;
+  _has_sample   = true;
 }
 
 bool
 vmg_current_acs758::dataReady()
 {
-  // check if last reading was good, maybe need to sample data only once in a
-  // period, so need to
+  return _has_sample;
 }

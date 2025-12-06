@@ -2,34 +2,13 @@
 #include "esp_adc_cal_types_legacy.h"
 #include "hal/adc_types.h"
 #include "vmg_current.hpp"
-/*
-enum class adc_type_t{
-    ADC1,
-    ADC2
-};
-*/
 
-class vmg_current_driver {
+class vmg_current_backend {
  public:
-  virtual void update()         = 0;
+  virtual void update()          = 0;
 
-  virtual ~vmg_current_driver() = default;
+  virtual ~vmg_current_backend() = default;
 
-  vmg_current_driver(vmg_current_sensor& frontend, adc1_channel_t channel,
-                     adc_atten_t adc_attenuation) :
-      //       adc_number(adc_number), reason - potential usage, not now
-      adc_attenuation(adc_attenuation),
-      adc_channel(channel),
-      current_front(frontend)
-  {
-  }
-
-  void _copy_to_sensor(uint8_t instance);
-
- private:
-  //    const adc_type_t adc_number;
-  adc_atten_t adc_attenuation;
-  adc1_channel_t adc_channel;
-  esp_adc_cal_characteristics_t calibration_data;
-  vmg_current_sensor& current_front;
+  static void copyToSensor(Sensor data, uint64_t current);
+  virtual void init() = 0;
 };

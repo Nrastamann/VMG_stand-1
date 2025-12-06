@@ -132,6 +132,7 @@ class vmg_adc_driver {
 
 class adc_subscriber {
  public:
+  adc_subscriber(adc_channel_t channel) : _channel(channel) {}
   void
   setRef(vmg_adc_driver* driver)
   {
@@ -143,9 +144,10 @@ class adc_subscriber {
     return *storage;
   }
 
-  uint64_t getData(adc_channel_t channel);
+  uint64_t getData();
 
  private:
+  adc_channel_t _channel;
   std::shared_ptr<adc_dma_storage*> storage = nullptr;
 };
 
