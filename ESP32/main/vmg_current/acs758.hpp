@@ -7,7 +7,6 @@
 #include "hal/adc_types.h"
 #include "vmg_utility/adc_driver.hpp"
 
-uint8_t constexpr MULTISAMPLE_AMOUNT{10};
 uint32_t constexpr DEFAULT_REFERENCE_VOLTAGE{2380};
 
 constexpr uint32_t DEFAULT_VREF{1100};

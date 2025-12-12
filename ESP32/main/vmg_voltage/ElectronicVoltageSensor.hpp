@@ -7,26 +7,28 @@
 #include "voltage_backend.hpp"
 #include "voltage_driver.hpp"
 
-static uint8_t constexpr MULTISAMPLE_AMOUNT{10};
-static uint32_t constexpr DEFAULT_REFERENCE_VOLTAGE{2380};
+constexpr uint16_t DEFAULT_R1{30000};
+constexpr uint16_t DEFAULT_R2{7500};
 
-constexpr uint32_t DEFAULT_VREF{1100};
-// in mV, used if eFuse values is not available
+constexpr uint16_t DEFAULT_R1_SECOND{110};
+constexpr uint16_t DEFAULT_R2_SECOND{31};
 
-constexpr uint32_t DEFAULT_SENSOR_VOLTAGE{5000};
-constexpr uint16_t DEFAULT_MAX_CURRENT{25000};
+constexpr uint16_t REFERENCE_VOLTAGE{5000};
+
+constexpr uint16_t DEFAULT_MAX_VOLTAGE{25000};
 
 class vmg_electronic_voltage_sensor : public vmg_voltage_backend {
  public:
-  vmg_electronic_voltage_sensor(
-      adc_channel_t channel, adc_dma_storage* storage,
-      uint8_t max_voltage        = DEFAULT_MAX_CURRENT,
-      uint16_t zero_voltage      = DEFAULT_REFERENCE_VOLTAGE,
-      uint8_t voltage_to_current = DEFAULT_VOLTAGE_TO_CURRENT) :
+  vmg_electronic_voltage_sensor(adc_channel_t channel, adc_dma_storage* storage,
+                                uint16_t r1        = DEFAULT_R1,
+                                uint16_t r2        = DEFAULT_R2,
+                                uint16_t second_r1 = DEFAULT_R1_SECOND,
+                                uint16_t second_r2 = DEFAULT_R2_SECOND) :
       _adc_instance(channel, storage),
-      _max_current(max_current),
-      _zero_voltage(zero_voltage),
-      _voltage_to_current(voltage_to_current)
+      _first_resistanse(r1),
+      _second_resistanse(r2),
+      _first_resistanse_adc(second_r1),
+      _second_resistanse_adc(second_r2)
   {
   }
 
@@ -51,11 +53,13 @@ class vmg_electronic_voltage_sensor : public vmg_voltage_backend {
   };
 
   bool _has_sample      = false;
-  uint64_t _raw_voltage = 0;
-  float _ref_voltage;
+  uint16_t _raw_voltage = 0;
 
-  uint64_t _voltage = 0;
+  uint16_t _voltage     = 0;
   adc_subscriber _adc_instance;
-  uint8_t _max_current;
-  uint16_t _zero_voltage;
+
+  uint16_t _first_resistanse;
+  uint16_t _second_resistanse;
+  uint16_t _first_resistanse_adc;
+  uint16_t _second_resistanse_adc;
 };

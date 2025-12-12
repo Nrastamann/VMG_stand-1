@@ -27,6 +27,7 @@ vmg_current_acs758::readRaw()
 void
 vmg_current_acs758::calculate()
 {
+  _has_sample   = false;
   uint64_t temp = _raw_current * DEFAULT_SENSOR_VOLTAGE / VREF;
   _current      = (temp - _zero_voltage) / _voltage_to_current;
   _has_sample   = true;
