@@ -29,10 +29,6 @@ inline extern constexpr size_t ADC_FRAME_SIZE{SOC_ADC_DIGI_RESULT_BYTES *
                                               (AMOUNT_OF_ADC_SENSORS + 1)};
 inline extern constexpr size_t ADC_BUFFER_SIZE{ADC_FRAME_SIZE * 4};
 
-enum class ADC_ERROR {
-  smth = 0
-};
-
 class adc_dma_storage;
 class adc_subscriber;
 
