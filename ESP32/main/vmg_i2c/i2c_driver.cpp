@@ -4,8 +4,9 @@
 #include "esp_err.h"
 #include "hal/i2c_types.h"
 static constexpr uint8_t DEFAULT_GLITCH_IGNORE_COUNT{7};
-void
-vmg_i2c_driver::config(
+vmg_i2c_driver::vmg_i2c_driver(
+    i2c_port_num_t _i2c_port, gpio_num_t _sda_port, gpio_num_t _scl_port,
+    i2c_clock_source_t _clk_source,
     uint8_t glitch_ignore_count = DEFAULT_GLITCH_IGNORE_COUNT)
 {
   i2c_master_bus_config_t const i2c_mst_config{
@@ -28,31 +29,32 @@ vmg_i2c_driver::probe(uint16_t addr)
 }
 #endif
 
+template <size_t Recv, size_t Send>
 void
 vmg_i2c_driver::device_config(i2c_device_config_t const& slave_config,
-                              i2c_subscriber& subscriber)
+                              i2c_subscriber<Recv, Send>& subscriber)
 {
   ESP_ERROR_CHECK(i2c_master_bus_add_device(_bus_handle, &slave_config,
                                             &subscriber.get_handle()));
 }
 
-template <size_t N>
+template <size_t Recv, size_t Send>
 void
-i2c_subscriber<N>::read_data()
+i2c_subscriber<Recv, Send>::read_data()
 {
   ESP_ERROR_CHECK(i2c_master_transmit(_handle, _w_buffer, _wlen, -1));
 }
 
-template <size_t N>
+template <size_t Recv, size_t Send>
 void
-i2c_subscriber<N>::send_data()
+i2c_subscriber<Recv, Send>::send_data()
 {
   ESP_ERROR_CHECK(i2c_master_receive(_handle, _r_buffer, _rlen, -1));
 }
 
-template <size_t N>
+template <size_t Recv, size_t Send>
 void
-i2c_subscriber<N>::send_and_read_data()
+i2c_subscriber<Recv, Send>::send_and_read_data()
 {
   ESP_ERROR_CHECK(i2c_master_transmit_receive(_handle, _w_buffer, _wlen,
                                               _r_buffer, _rlen, -1));
