@@ -13,6 +13,8 @@
 #include "hal/adc_types.h"
 #include "soc/soc_caps.h"
 
+class ADC_DRIVER_SUBSCRIBER_TAG {};
+
 constexpr bool lut_usage{false};
 constexpr bool curve_fitting{true};
 constexpr bool NO_DEFAULT_VREF{false};

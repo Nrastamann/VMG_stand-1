@@ -11,6 +11,8 @@
 #define PULLUP_INTERNAL_ENABLED false
 #define PULLUP_EXTERNAL_ENABLED false
 
+class I2C_DRIVER_SUBSCRIBER_TAG {};
+
 static constexpr uint8_t SENDLEN{UINT8_MAX};
 static constexpr uint8_t RECVLEN{UINT8_MAX};
 
@@ -64,12 +66,12 @@ class i2c_subscriber {
   }
   // send and read after that from slave
 
- private:
   size_t _wlen;
   size_t _rlen;
 
   std::array<uint8_t, Send> _w_buffer;
   std::array<uint8_t, Recv> _r_buffer;
 
+ private:
   i2c_master_dev_handle_t _handle;
 };
