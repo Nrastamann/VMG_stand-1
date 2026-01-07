@@ -52,13 +52,14 @@ class vmg_i2c_driver {
 template <size_t Recv = RECVLEN, size_t Send = SENDLEN>
 class i2c_subscriber {
  public:
-  void read_data();
+  void read_data(uint8_t amount = Recv);
   // read data to buffer
 
-  void send_data();
+  void send_data(uint8_t amount = Send);
   // send data to slave
 
-  void send_and_read_data();
+  void send_and_read_data(uint8_t send_amount    = Send,
+                          uint8_t receive_amount = Recv);
   i2c_master_dev_handle_t&
   get_handle()
   {

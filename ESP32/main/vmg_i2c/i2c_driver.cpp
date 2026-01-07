@@ -40,22 +40,34 @@ vmg_i2c_driver::device_config(i2c_device_config_t const& slave_config,
 
 template <size_t Recv, size_t Send>
 void
-i2c_subscriber<Recv, Send>::read_data()
+i2c_subscriber<Recv, Send>::read_data(uint8_t amount)
 {
-  ESP_ERROR_CHECK(i2c_master_transmit(_handle, _w_buffer, _wlen, -1));
+  static_assert(amount <= Recv,
+                "I2C: amount shouldn't be greater than template argument");
+  ESP_ERROR_CHECK(i2c_master_transmit(_handle, _r_buffer, amount, -1));
 }
 
 template <size_t Recv, size_t Send>
 void
-i2c_subscriber<Recv, Send>::send_data()
+i2c_subscriber<Recv, Send>::send_data(uint8_t amount)
 {
-  ESP_ERROR_CHECK(i2c_master_receive(_handle, _r_buffer, _rlen, -1));
+  static_assert(amount <= Send,
+                "I2C: amount shouldn't be greater than template argument");
+
+  ESP_ERROR_CHECK(i2c_master_receive(_handle, _w_buffer, amount, -1));
 }
 
 template <size_t Recv, size_t Send>
 void
-i2c_subscriber<Recv, Send>::send_and_read_data()
+i2c_subscriber<Recv, Send>::send_and_read_data(uint8_t send_amount,
+                                               uint8_t receive_amount)
 {
-  ESP_ERROR_CHECK(i2c_master_transmit_receive(_handle, _w_buffer, _wlen,
-                                              _r_buffer, _rlen, -1));
+  static_assert(send_amount <= Send,
+                "I2C: amount shouldn't be greater than template argument");
+
+  static_assert(receive_amount <= Recv,
+                "I2C: amount shouldn't be greater than template argument");
+
+  ESP_ERROR_CHECK(i2c_master_transmit_receive(_handle, _w_buffer, send_amount,
+                                              _r_buffer, receive_amount, -1));
 }

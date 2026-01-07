@@ -1,4 +1,6 @@
 #include <array>
+#include <cstdint>
+#include <unordered_map>
 
 #include "vmg_external_adc/external_adc_driver.hpp"
 #include "vmg_i2c/i2c_driver.hpp"
@@ -141,17 +143,35 @@ constexpr uint16_t RATE_ADS1115_860SPS{0x00E0};  ///< 860 samples per second
 
 constexpr uint8_t BUFFER_SIZE{3};
 struct ads1115
-    : public external_adc<ads1115, i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>> {
-  void static writeRegisterImpl(uint8_t reg, uint16_t value,
-                                i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>& bus);
-  uint16_t static readRegisterImpl(
-      uint8_t reg, i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>& bus);
-  void readADCImpl(i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>& bus);
-  bool probeImpl(i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>& bus);
+    : protected external_adc<ads1115,
+                             i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>> {
+ private:
+  using bus_type  = i2c_subscriber<BUFFER_SIZE, BUFFER_SIZE>;
+  using base_type = external_adc<ads1115, bus_type>;
+
+ public:
   ads1115() = delete;
   ads1115(uint16_t dataRate = RATE_ADS1115_128SPS, uint8_t bitshift = 0,
           uint8_t gain = static_cast<uint8_t>(adcGain_t::GAIN_TWOTHIRDS)) :
       external_adc(bitshift, gain, dataRate)
   {
   }
+
+  void static writeRegisterImpl(uint8_t reg, uint16_t value, base_type* base);
+  uint16_t static readRegisterImpl(uint8_t reg, base_type* base);
+  static int16_t readADCSingleImpl(uint8_t channel, base_type* base);
+
+  static int16_t readDifferentialImpl(uint8_t channel1, uint8_t channel2,
+                                      base_type* base);
+  static void startComparatorImpl(uint8_t channel, int16_t threshold,
+                                  base_type* base);
+
+  static int16_t getLastConversionImpl(base_type* base);
+  static float getFsRangeImpl(base_type* base);
+
+  static float computeVoltsImpl(int16_t amount, base_type* base);
+  static void startADCReadingImpl(uint16_t mux, bool continuous,
+                                  base_type* base);
+
+  static bool conversionCompleteImpl(base_type* base);
 };
