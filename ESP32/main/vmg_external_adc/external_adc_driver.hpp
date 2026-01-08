@@ -1,7 +1,9 @@
 #include <cstdint>
 #include <cstdlib>
 
-template <typename Derived, typename bus>
+class EXTERNAL_ADC_SUBSCRIBER_TAG {};
+
+template <typename Derived, typename Bus>
 class external_adc {
  public:
   external_adc(uint8_t bitshift, uint8_t gain, uint16_t dataRate) :
@@ -50,14 +52,14 @@ class external_adc {
     return _dataRate;
   }
 
-  bus&
+  Bus&
   getBus()
   {
     return _bus;
   }
 
   void
-  setBus(bus const& configured_bus)
+  setBus(Bus const& configured_bus)
   {
     _bus = configured_bus;
   }
@@ -111,7 +113,7 @@ class external_adc {
   }
 
  protected:
-  bus _bus;
+  Bus _bus;
   uint8_t _bitShift;  ///< bit shift amount
   uint8_t _gain;      ///< ADC gain
   uint16_t _dataRate;

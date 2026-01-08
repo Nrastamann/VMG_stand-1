@@ -1,10 +1,14 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <optional>
 
 #include "current_backend.hpp"
 #include "current_driver.hpp"
 #include "hal/adc_types.h"
+#include "vmg_external_adc/ads1115.hpp"
+#include "vmg_external_adc/external_adc_driver.hpp"
 #include "vmg_i2c/i2c_driver.hpp"
 #include "vmg_utility/adc_driver.hpp"
 
@@ -17,19 +21,14 @@ constexpr uint32_t DEFAULT_SENSOR_VOLTAGE{5000};
 constexpr uint8_t DEFAULT_VOLTAGE_TO_CURRENT{20};
 constexpr uint8_t DEFAULT_MAX_CURRENT{100};
 
-// template <typename T, size_t Recv, size_t Send>
-// class vmg_current_acs758<T, Recv, Send> : public vmg_current_backend {};
-
-template <typename T = ADC_DRIVER_SUBSCRIBER_TAG, size_t Recv = 0,
-          size_t Send = 0>
+template <typename T = ADC_DRIVER_SUBSCRIBER_TAG, typename Bus = adc_subscriber,
+          typename Derived = std::nullopt_t>
 class vmg_current_acs758 : public vmg_current_backend {
  public:
   vmg_current_acs758(adc_channel_t channel, adc_dma_storage* storage,
-                     uint8_t max_current        = DEFAULT_MAX_CURRENT,
                      uint16_t zero_voltage      = DEFAULT_REFERENCE_VOLTAGE,
                      uint8_t voltage_to_current = DEFAULT_VOLTAGE_TO_CURRENT) :
       _adc_instance(channel, storage),
-      _max_current(max_current),
       _zero_voltage(zero_voltage),
       _voltage_to_current(voltage_to_current)
   {
@@ -39,7 +38,7 @@ class vmg_current_acs758 : public vmg_current_backend {
   void update() final;
   bool healthy();
   void
-  setAdcSubscription(adc_subscriber&& adc_instance)
+  setAdcSubscription(Bus&& adc_instance)
   {
     this->_adc_instance = std::move(adc_instance);
   }
@@ -57,35 +56,26 @@ class vmg_current_acs758 : public vmg_current_backend {
 
   bool _has_sample      = false;
   uint64_t _raw_current = 0;
-  float _ref_voltage;
 
-  uint64_t _current = 0;
-  adc_subscriber _adc_instance;
-  uint8_t _max_current;
+  uint64_t _current     = 0;
+  Bus _adc_instance;
   uint16_t _zero_voltage;
   uint8_t _voltage_to_current = DEFAULT_VOLTAGE_TO_CURRENT;
 };
 
-template <size_t Recv, size_t Send>
-class vmg_current_acs758<I2C_DRIVER_SUBSCRIBER_TAG, Recv, Send>
+template <typename Bus, typename Derived>
+class vmg_current_acs758<EXTERNAL_ADC_SUBSCRIBER_TAG,
+                         external_adc<Derived, Bus>, Bus>
     : public vmg_current_backend {
  public:
-  vmg_current_acs758(uint8_t max_current        = DEFAULT_MAX_CURRENT,
-                     uint16_t zero_voltage      = DEFAULT_REFERENCE_VOLTAGE,
-                     uint8_t voltage_to_current = DEFAULT_VOLTAGE_TO_CURRENT) :
-      _max_current(max_current),
-      _zero_voltage(zero_voltage),
-      _voltage_to_current(voltage_to_current)
-  {
-  }
-
-  vmg_current_acs758() = delete;
+  vmg_current_acs758() = default;
   void update() final;
   bool healthy();
+
   void
-  setI2CSubscription(i2c_subscriber<Recv, Send>&& i2c_instance)
+  setExternalAdcInstance(external_adc<Derived, Bus>* adc)
   {
-    _i2c_subscriber = std::move(i2c_instance);
+    _external_adc = std::make_unique<external_adc<Derived, Bus>*>(adc);
   }
 
  private:
@@ -99,13 +89,11 @@ class vmg_current_acs758<I2C_DRIVER_SUBSCRIBER_TAG, Recv, Send>
     return _has_sample;
   };
 
-  bool _has_sample      = false;
-  uint64_t _raw_current = 0;
-  float _ref_voltage;
+  bool _has_sample                              = false;
+  std::array<uint32_t, MULTISAMPLING_RATE> _raw = 0;
 
-  uint64_t _current = 0;
-  i2c_subscriber<Recv, Send> _i2c_subscriber;
-  uint8_t _max_current;
-  uint16_t _zero_voltage;
-  uint8_t _voltage_to_current = DEFAULT_VOLTAGE_TO_CURRENT;
+  uint8_t _multisample_acquired                 = 0;
+  uint64_t _current_raw                         = 0;
+  uint64_t _current                             = 0;
+  std::unique_ptr<external_adc<Derived, Bus>*> _external_adc;
 };

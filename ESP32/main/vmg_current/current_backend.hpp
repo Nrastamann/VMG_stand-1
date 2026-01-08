@@ -7,5 +7,5 @@ class vmg_current_backend {
  public:
   virtual void update()          = 0;
   virtual ~vmg_current_backend() = default;
-  void copyToSensor(SensorCurrent data, uint64_t current);
+  void copyToSensor(SensorCurrent& data, uint64_t current);
 };

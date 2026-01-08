@@ -45,7 +45,7 @@ class vmg_adc_driver {
   }
   vmg_adc_driver() = delete;
 
-  void refill_buffer(std::shared_ptr<adc_dma_storage*> storage);
+  void refill_buffer(std::shared_ptr<adc_dma_storage*> const& storage);
 #if lut_usage
   float get_lut(size_t reading);
 #else
@@ -97,7 +97,8 @@ class vmg_adc_driver {
     return this->_handle;
   }
 
-  std::optional<size_t> get_data(std::shared_ptr<adc_dma_storage*> storage);
+  std::optional<size_t> get_data(
+      std::shared_ptr<adc_dma_storage*> const& storage);
 
   size_t
   get_channel_index(adc_channel_t channel_num)

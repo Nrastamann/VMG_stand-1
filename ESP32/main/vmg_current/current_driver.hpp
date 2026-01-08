@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <memory>
 
+#include "esp_log.h"
+
 class vmg_current_backend;
 
 static constexpr uint8_t MULTISAMPLING_RATE{10};
@@ -34,7 +36,11 @@ class vmg_current_driver {
   void
   addBackend(vmg_current_backend* ptr)
   {
-    _drivers.push_back(std::make_unique<vmg_current_backend*>(ptr));
+    if (_amount_sensors == CURRENT_MAX_AMOUNT) {
+      ESP_LOGE("Current frontend", "Too much current drivers, need to clear");
+      return;
+    }
+    _drivers[_amount_sensors++] = std::make_unique<vmg_current_backend*>(ptr);
   }
 
   void
@@ -55,6 +61,6 @@ class vmg_current_driver {
       _drivers;
 
   uint8_t _primary;
-  uint8_t _amount_sensors;
-  uint8_t _amount_drivers;
+  uint8_t _amount_sensors = 0;
+  uint8_t _amount_drivers = 0;
 };

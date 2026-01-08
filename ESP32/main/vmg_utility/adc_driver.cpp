@@ -114,18 +114,19 @@ vmg_adc_driver::config_adc(adc_digi_convert_mode_t const convert,
 }
 
 std::optional<size_t>
-vmg_adc_driver::get_data(std::shared_ptr<adc_dma_storage*> storage)
+vmg_adc_driver::get_data(std::shared_ptr<adc_dma_storage*> const& storage)
 {
-  uint32_t read_length;
+  uint32_t read_length = 0;
 
-  return adc_continuous_read(*_handle, *storage->getRawBuffer(), ADC_FRAME_SIZE,
-                             &read_length, 0) == ESP_OK
-             ? read_length
-             : std::nullopt;
+  return std::optional<size_t>(
+      adc_continuous_read(*_handle, *storage->getRawBuffer(), ADC_FRAME_SIZE,
+                          &read_length, 0) == ESP_OK
+          ? read_length
+          : std::nullopt);
 }
 
 void
-vmg_adc_driver::refill_buffer(std::shared_ptr<adc_dma_storage*> storage)
+vmg_adc_driver::refill_buffer(std::shared_ptr<adc_dma_storage*> const& storage)
 {
   size_t len = get_data(storage).value_or(0);
   auto it    = (*storage)->getRawBuffer();
