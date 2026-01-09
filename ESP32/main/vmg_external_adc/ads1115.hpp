@@ -150,7 +150,7 @@ struct ads1115
   using base_type = external_adc<ads1115, bus_type>;
 
  public:
-  ads1115() = default;
+  ads1115() = delete;
 
   void static writeRegisterImpl(uint8_t reg, uint16_t value, base_type* base);
   uint16_t static readRegisterImpl(uint8_t reg, base_type* base);

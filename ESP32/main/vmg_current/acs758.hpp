@@ -9,7 +9,6 @@
 #include "hal/adc_types.h"
 #include "vmg_external_adc/ads1115.hpp"
 #include "vmg_external_adc/external_adc_driver.hpp"
-#include "vmg_i2c/i2c_driver.hpp"
 #include "vmg_utility/adc_driver.hpp"
 
 uint32_t constexpr DEFAULT_REFERENCE_VOLTAGE{2380};
@@ -38,7 +37,7 @@ class vmg_current_acs758 : public vmg_current_backend {
   void update() final;
   bool healthy();
   void
-  setAdcSubscription(Bus&& adc_instance)
+  init(Bus&& adc_instance)
   {
     this->_adc_instance = std::move(adc_instance);
   }
@@ -46,7 +45,6 @@ class vmg_current_acs758 : public vmg_current_backend {
  private:
   bool probe();
 
-  void readRaw();
   void calculate();
   [[nodiscard]] bool
   dataReady() const
@@ -72,28 +70,24 @@ class vmg_current_acs758<EXTERNAL_ADC_SUBSCRIBER_TAG,
   void update() final;
   bool healthy();
 
-  void
-  setExternalAdcInstance(external_adc<Derived, Bus>* adc)
-  {
-    _external_adc = std::make_unique<external_adc<Derived, Bus>*>(adc);
-  }
+  void init(std::shared_ptr<external_adc<Derived, Bus>> const& adc,
+            uint16_t mux);
 
  private:
   bool probe();
 
-  void readRaw();
   void calculate();
   [[nodiscard]] bool
   dataReady() const
   {
     return _has_sample;
   };
+  std::shared_ptr<external_adc<Derived, Bus>> _external_adc = nullptr;
 
-  bool _has_sample                              = false;
-  std::array<uint32_t, MULTISAMPLING_RATE> _raw = 0;
+  std::array<uint32_t, MULTISAMPLING_RATE> _raw             = {0};
 
-  uint8_t _multisample_acquired                 = 0;
-  uint64_t _current_raw                         = 0;
-  uint64_t _current                             = 0;
-  std::unique_ptr<external_adc<Derived, Bus>*> _external_adc;
+  uint64_t _current_raw                                     = 0;
+  uint64_t _current                                         = 0;
+  uint8_t _multisample_acquired                             = 0;
+  bool _has_sample                                          = false;
 };

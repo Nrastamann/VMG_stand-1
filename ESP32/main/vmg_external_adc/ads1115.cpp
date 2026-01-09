@@ -109,7 +109,7 @@ ads1115::getLastConversionImpl(base_type* base)
   uint16_t res  = readRegisterImpl(ADS1X15_REG_POINTER_CONVERT, base) >> shift;
 
   if (shift == 0) {
-    return shift;
+    return static_cast<int16_t>(res);
   }
 
   if (res > 0x07FF) {
