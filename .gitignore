@@ -22,3 +22,5 @@ ESP32Code/README*
 dependencies.lock
 .vscode
 *.idx
+client_message.h
+stand_message.h

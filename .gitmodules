@@ -1,0 +1,3 @@
+[submodule "VMG-Protocol"]
+	path = VMG-Protocol
+	url = https://github.com/spbu-sed-uav/VMG-Protocol
