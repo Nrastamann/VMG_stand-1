@@ -2,16 +2,9 @@
 
 #include <cassert>
 #include <cstdint>
-namespace vmg_system::sensors {
-  enum class BusType : uint8_t {
-    NONE,
-    I2C,
-    SPI,
-    UART,
-    TIMER,
-    INTERRUPT,
-  };
 
+#include "../HAL/HAL.hpp"
+namespace vmg_system::sensors {
   static constexpr char const*
   busToStr(BusType type)
   {
@@ -54,43 +47,20 @@ namespace vmg_system::sensors {
       return _sensor_id;
     }
 
-    int
-    collectSPI(this auto& self)
-    {
-      static_assert(SingleBus == BusType::SPI || SingleBus == BusType::NONE,
-                    "Calling for spi bus, when configured to use other bus");
-      return self.collectSPIImpl();
-    }  // is there any sense to that?
     void
-    collectI2C(this auto& self)
+    update(this auto& self)
     {
-      static_assert(SingleBus == BusType::I2C || SingleBus == BusType::NONE,
-                    "Calling for i2c bus, when configured to use other bus");
-      return self.collectI2CImpl();
-    }
-    void
-    collectUART(this auto& self)
-    {
-      static_assert(SingleBus == BusType::UART || SingleBus == BusType::NONE,
-                    "Calling for uart bus, when configured to use other bus");
-      return self.collectUARTImpl();
-    }
-    void
-    collectTimer(this auto& self)
-    {
-      static_assert(SingleBus == BusType::TIMER || SingleBus == BusType::NONE,
-                    "Calling for timer bus, when configured to use other bus");
-      return self.collectTimerImpl();
-    }
-    void
-    collectInt(this auto& self)
-    {
-      static_assert(
-          SingleBus == BusType::INTERRUPT || SingleBus == BusType::NONE,
-          "Calling for interrupt bus, when configured to use other bus");
-      return self.collectIntImpl();
+      self.updateImpl();
     }
 
+    uint64_t
+    getValue(this auto& self, uint8_t sensor_reading = 0)
+    {
+      return self.getValueImpl(sensor_reading);
+    }
+
+   protected:
+    vmg_system::hal::HAL* _hal{nullptr};
     size_t _sensor_id{};
     BusType _bus_type{};
   };
